@@ -8,7 +8,7 @@
 # Geometry, Shock tube geometries: driver and driven section length and diameter
 
 import sys; sys.path.append('../../')
-from stanShock import dSFdx, stanShock, smoothingFunction
+from ShockTubeSimulations.stanShock import dSFdx, stanShock, smoothingFunction
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
