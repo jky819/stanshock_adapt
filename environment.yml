@@ -1,11 +1,13 @@
-name: p37_cantera
+name: stanshock_adapt
 channels:
-  - https://pypi.org/simple/
+  - cantera
 dependencies:
+  - numpy
   - cantera
   - matplotlib
-  - numpy
-  - scikit-image
-  - jupyter
   - pandas
-prefix: C:\Users\Jackie Zheng\.conda\envs\p37_cantera
+  - jupyter
+  - ipykernel
+  - scipy
+  - numba
+  

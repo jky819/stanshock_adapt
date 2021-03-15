@@ -23,6 +23,7 @@ import numpy as np
 from numba import double, jit
 import cantera as ct
 import matplotlib.pyplot as plt
+plt.rc('text', usetex=False)
 from scipy.optimize import root
 from scipy.optimize import newton
 

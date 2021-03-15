@@ -35,7 +35,7 @@ class ShockSim:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=True)
+        plt.rc('text', usetex=False)
         # setup geometry
         xLower = -LDriver
         xUpper = LDriven
@@ -174,7 +174,7 @@ class ShockSim:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=True)
+        plt.rc('text', usetex=False)
 
         # setup geometry
         xLower = -LDriver
