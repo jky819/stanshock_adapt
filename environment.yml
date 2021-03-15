@@ -10,5 +10,5 @@ dependencies:
   - ipykernel
   - scipy
   - numba
-  - sklearn
+  - scikit-learn
   
