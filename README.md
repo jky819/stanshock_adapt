@@ -1,5 +1,9 @@
-# StanShock
-Author: Kevin Grogan
+# StanShock (Hanson Lab Adaptation)
+Original Author: Kevin Grogan
+
+Current adaptation edited by: Jackie Zheng
+
+Access binder through:
 
 Contained in this folder is StanShock v0.1. StanShock is a quasi-1D gas dynamics solver designed model shock tube experiments. 
 
