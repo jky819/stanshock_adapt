@@ -76,17 +76,6 @@ class ShockSim:
         except:
             self.Sim['CRV'] = False
 
-        if self.Sim['Backfill']:
-            try:
-                # unpack backfill gas composition
-                xBackfill = self.Mixture['XBackfill']
-                # define backfill location
-                LBackfill = self.Geometry['LBackfill']
-                # define back fill gas
-                gasBackfill = ct.Solution(mech)
-                gasBackfill.TPX = T4, p4, xBackfill
-            except:
-                raise Exception('Backfill gas mixture not defined!!!')
         if self.Sim['CRV']:
             try:
                 # define buffer gas composition
@@ -126,7 +115,20 @@ class ShockSim:
                        dlnAdx=dlnAdx)
         # implement backfill if called for
         if self.Sim['Backfill']:
-            ss.applyDriverBackfill(gasBackfill, LBackfill)
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[0]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
         # implement CRV if called for
         if self.Sim['CRV']:
             ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
