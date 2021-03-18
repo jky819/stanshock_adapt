@@ -12,6 +12,7 @@ from stanShock import dSFdx, stanShock, smoothingFunction
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
+plt.rc('text', usetex=False)
 import time
 import cantera as ct
 from scipy.optimize import newton
@@ -33,6 +34,7 @@ class ShockSim:
         nXFine = self.Sim['nXFine']  # mesh resolution
         LDriver, LDriven = self.Geometry['LDriver'], self.Geometry['LDriven']
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
+
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
         plt.rc('text', usetex=False)
@@ -63,6 +65,40 @@ class ShockSim:
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
 
+        # see if backfill option is specified, if not, set to default no backfill
+        try:
+            self.Sim['Backfill']
+        except:
+            self.Sim['Backfill'] = False
+        # see if CRV option is specified, if not, set default to no CRV
+        try:
+            self.Sim['CRV']
+        except:
+            self.Sim['CRV'] = False
+
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas
+                gasBackfill = ct.Solution(mech)
+                gasBackfill.TPX = T4, p4, xBackfill
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
+
         # set up boundary condition
         boundaryConditions = ['reflecting', 'reflecting']
         state1 = (gas1, u1)
@@ -88,6 +124,13 @@ class ShockSim:
                        D_mul = self.Sim['D_mul'],
                        DOuter=DOuter,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            ss.applyDriverBackfill(gasBackfill, LBackfill)
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
+
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         try:

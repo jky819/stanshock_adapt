@@ -828,6 +828,64 @@ class stanShock(object):
             self.t=[] #list of times
             self.x=None #numpy array of x (the interpolated grid)
 ##############################################################################
+    ''''Adam's new backfill and CRV methods'''
+    def overwriteGasSpecies(self, gas: ct.Solution, indices):
+        """
+        Overwrites the species data and properties at specified indices wih the contents of gas
+        :param gas: cantera Solution with gas composition and conditions to use in overwriting
+        :param indices: indices of state vector to overwrite
+        :return: None
+        """
+        self.r[indices] = gas.density_mass
+        self.gamma[indices] = gas.cp / gas.cv
+        for kSp in range(self.__nsp):
+            self.Y[indices, kSp] = gas.Y[kSp]
+
+    def applyDriverBackfill(self, backfillGas: ct.Solution, xBackfill):
+        """
+        Overwrites a portion of existing driver gas with a new species
+        :param backfillGas: cantera Solution with gas composition and conditions to use in overwriting
+        :param xBackfill: length of backfill, starting from driven end wall
+        :return: None
+        """
+        indices = self.x <= self.x[0] + xBackfill
+        self.overwriteGasSpecies(backfillGas, indices)
+        # self.r[index] = backfillGas.density
+        # self.gamma[index] = backfillGas.cp / backfillGas.cv
+        # for kSp in range(self.__nsp):
+        #     self.Y[index, kSp] = backfillGas.Y[kSp]
+
+    def applyTestGasCRV(self, testGas: ct.Solution, xCRV):
+        """
+        Overwrites a portion of existing test (buffer) gas with a new species
+        :param testGas: cantera Solution with gas composition and conditions to use in overwriting
+        :param xCRV: length of crv gas, starting from driven end wall
+        :return: None
+        """
+        indices = self.x >= self.x[-1] - xCRV
+        self.overwriteGasSpecies(testGas, indices)
+
+    def applyTestGasBuffer(self, bufferGas: ct.Solution, xbuffer=None, xcrv=None, buffer_fraction=None):
+        """
+        Overwrites a portion of existing test gas with a buffer gas
+        :param bufferGas: cantera Solution with gas composition and conditions to use as the buffer gas
+        :param xbuffer: buffer gas length [m], measured from diaphragm, default None
+        :param xcrv: test gas length [m], measured from driven end wall, used only if xbuffer=None, defualt None
+        :param buffer_fraction: fraction of driver to contain buffer, used only if xbuffer=xcrv=None
+        :return: None
+        """
+        if xbuffer is not None:
+            xstop = xbuffer
+        elif xcrv is not None:
+            xstop = self.x[-1] - xcrv
+        elif buffer_fraction is not None:
+            xstop = self.x[-1] * buffer_fraction
+        else:
+            print(f'No buffer gas extent specified; specify one of "xbuffer", "xcrv", or "buffer_fraction" parameters.')
+            return
+        indices = (self.x >= 0) * (self.x <= xstop)
+        self.overwriteGasSpecies(bufferGas, indices)
+##############################################################################
     def __updateXTDiagram(self,XTDiagram):
         '''
         Method: __updateXTDiagram
