@@ -124,7 +124,7 @@ class ShockSim:
                 for stage in range(0, len(xBackfill)):
                     gasBackfill = ct.Solution(mech)
                     gasBackfill.TPX = T4, p4, xBackfill[stage]
-                    l_backfill = LBackfill[0]
+                    l_backfill = LBackfill[stage]
                     ss.applyDriverBackfill(gasBackfill, l_backfill)
             except:
                 raise Exception('Backfill gas mixture not defined!!!')
