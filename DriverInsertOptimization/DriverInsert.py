@@ -25,6 +25,18 @@ class InsertOpt:
         self.Geometry = Geometry
         self.plot = plot
         self.saveData = saveData
+
+        # see if backfill option is specified, if not, set to default no backfill
+        try:
+            self.Sim['Backfill']
+        except:
+            self.Sim['Backfill'] = False
+        # see if CRV option is specified, if not, set default to no CRV
+        try:
+            self.Sim['CRV']
+        except:
+            self.Sim['CRV'] = False
+
     def GetInsert(self):
         # input thermodynamic and shock tube parameters
         fontsize = 12
@@ -79,7 +91,7 @@ class InsertOpt:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=False)
+        plt.rc('text', usetex=True)
 
         # setup geometry
         xLower = -LDriver
@@ -105,6 +117,18 @@ class InsertOpt:
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
 
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
+
         # set up solver parameter
         boundaryConditions = ['reflecting', 'reflecting']
         state1 = (gas1, u1)
@@ -129,6 +153,25 @@ class InsertOpt:
                        D_mul=self.Sim['D_mul'],
                        DOuter=DOuter,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
 
         # solve
         t0 = time.clock()
@@ -149,6 +192,17 @@ class InsertOpt:
         geometry = (nXFine, xLower, xUpper, xShock)
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -161,6 +215,25 @@ class InsertOpt:
                        DOuter=DOuter,
                        DInner=ss.DInner,
                        dlnAdx=ss.dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -226,6 +299,17 @@ class InsertOpt:
         geometry = (nXFine, xLower, xUpper, xShock)
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -238,6 +322,25 @@ class InsertOpt:
                        DOuter=DOuter,
                        DInner=DInner_discrete,
                        dlnAdx=dlnAdx_dis)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -260,6 +363,17 @@ class InsertOpt:
         # recalculate at higher resolution without the insert
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -271,6 +385,25 @@ class InsertOpt:
                        D_mul=self.Sim['D_mul'],
                        DOuter=DOuter,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -395,7 +528,7 @@ class InsertOpt:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=False)
+        plt.rc('text', usetex=True)
 
         # setup geometry
         xLower = -LDriver
@@ -473,6 +606,17 @@ class InsertOpt:
         # recalculate at higher resolution with the insert
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -485,6 +629,25 @@ class InsertOpt:
                        DOuter=DOuter,
                        DInner=DInner,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -499,8 +662,16 @@ class InsertOpt:
         TInsert = np.array(ss.thermoTable.getTemperature(rInsert, pInsert, YInsert))
 
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert) / 1e5, max(pInsert) / 1e5])
+            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)], saveData=True)
+            TMatrix = ss.XTDiagram_variableMatrix
+            timeXT = ss.XTDiagram_T
+            positionXT = ss.XTDiagram_X
+            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert) / 1e5, max(pInsert) / 1e5], saveData=True)
+            pMatrix = ss.XTDiagram_variableMatrix
+            self.TMatrix = TMatrix
+            self.pMatrix = pMatrix
+            self.timeXT = timeXT
+            self.positionXT = positionXT
         '''
         # ----------------------------------------------------------------------------------------
         # Now simulate discretized insert
@@ -602,6 +773,17 @@ class InsertOpt:
 
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -613,6 +795,25 @@ class InsertOpt:
                        D_mul=self.Sim['D_mul'],
                        DOuter=DOuter,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -717,7 +918,7 @@ class InsertOpt:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=False)
+        plt.rc('text', usetex=True)
 
         # setup geometry
         xLower = -LDriver
@@ -808,6 +1009,17 @@ class InsertOpt:
         # recalculate at higher resolution with the insert
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -820,6 +1032,25 @@ class InsertOpt:
                        DOuter=DOuter,
                        DInner=DInner_discrete,
                        dlnAdx=dlnAdx_dis)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
@@ -856,6 +1087,17 @@ class InsertOpt:
 
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
+        if self.Sim['CRV']:
+            try:
+                # define buffer gas composition
+                xBuffer = self.Mixture['XBuffer']
+                # define fraction of buffer section in driven section
+                frac_buffer = self.Geometry['BufferFraction']
+                # define buffer gas
+                gasBuffer = ct.Solution(mech)
+                gasBuffer.TPX = T4, p1, xBuffer
+            except:
+                raise Exception('Buffer gas not defined!!!')
         ss = stanShock(gas1, initializeRiemannProblem=(state4, state1, geometry),
                        boundaryConditions=boundaryConditions,
                        cfl=.9,
@@ -867,6 +1109,25 @@ class InsertOpt:
                        D_mul=self.Sim['D_mul'],
                        DOuter=DOuter,
                        dlnAdx=dlnAdx)
+        # implement backfill if called for
+        if self.Sim['Backfill']:
+            try:
+                # unpack backfill gas composition
+                xBackfill = self.Mixture['XBackfill']
+                # define backfill location
+                LBackfill = self.Geometry['LBackfill']
+                # define back fill gas stage by stage
+                for stage in range(0, len(xBackfill)):
+                    gasBackfill = ct.Solution(mech)
+                    gasBackfill.TPX = T4, p4, xBackfill[stage]
+                    l_backfill = LBackfill[stage]
+                    ss.applyDriverBackfill(gasBackfill, l_backfill)
+            except:
+                raise Exception('Backfill gas mixture not defined!!!')
+
+        # implement CRV if called for
+        if self.Sim['CRV']:
+            ss.applyTestGasBuffer(gasBuffer, buffer_fraction=frac_buffer)
         ss.addXTDiagram("p")
         ss.addXTDiagram("T")
         ss.addProbe(max(ss.x))  # end wall probe
