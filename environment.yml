@@ -11,9 +11,4 @@ dependencies:
   - scipy
   - numba
   - scikit-learn
-  - PySimpleGUI
-  - tkinter
-  - Qt
-  - Web
-  - WxPython
-  
+
