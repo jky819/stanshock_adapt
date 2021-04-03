@@ -12,18 +12,19 @@ from stanShock import dSFdx, stanShock, smoothingFunction
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-plt.rc('text', usetex=False)
 import time
 import cantera as ct
 from scipy.optimize import newton
+plt.rc('text', usetex=False)
 
 class ShockSim:
-    def __init__(self, Mixture, Thermal, Sim, Geometry, plot = True, saveData = False):
+    def __init__(self, Mixture, Thermal, Sim, Geometry, plot = True, saveData = False, GUI = False):
         self.Mixture = Mixture
         self.Thermal = Thermal
         self.Sim = Sim
         self.Geometry = Geometry
         self.plot = plot
+        self.GUI = GUI
         self.saveData = saveData
 
     def XT_Diagram_p4p1T1(self):
@@ -153,12 +154,25 @@ class ShockSim:
         TNoInsert = np.array(ss.thermoTable.getTemperature(rNoInsert, pNoInsert, YNoInsert))
         TWall = ss.Tw
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)], saveData=True)
+            if self.GUI:
+                self.figT =  ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)], saveData=True, outputFigure=True)
+            else:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)], saveData=True)
             TMatrix = ss.XTDiagram_variableMatrix
             timeXT = ss.XTDiagram_T
             positionXT = ss.XTDiagram_X
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert)/101325, max(pNoInsert)/101325], saveData=True)
+            if self.GUI:
+                self.figP =  ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert)/101325, max(pNoInsert)/101325], saveData=True, outputFigure=True)
+            else:
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert) / 101325, max(pNoInsert) / 101325], saveData=True)
             pMatrix = ss.XTDiagram_variableMatrix
+        xNoInsert = ss.x
+        DOuterNoInsert = ss.DOuter(ss.x)
+        try:
+            DInnerNoInsert = ss.DInner(ss.x)*39.3701
+        except:
+            DInnerNoInsert = np.zeros_like(ss.x)*39.3701
+
         # plot
         if self.plot:
             plt.figure()
@@ -166,11 +180,31 @@ class ShockSim:
             plt.xlabel("$t\ [\mathrm{ms}]$")
             plt.ylabel("$p\ [\mathrm{bar}]$")
             plt.tight_layout()
+            if self.GUI:
+                self.figEndWallP = plt.gcf()
+                plt.close(self.figEndWallP)
             plt.figure()
             plt.plot(tNoInsert / 1e-3, TNoInsert, 'r')  # label="$\mathrm{No\ Insert}$")
             plt.xlabel("$t\ [\mathrm{ms}]$")
             plt.ylabel("$T\ [\mathrm{K}]$")
             plt.tight_layout()
+            if self.GUI:
+                self.figEndWallT = plt.gcf()
+                plt.close(self.figEndWallT)
+            plt.figure(figsize=(12, 2))
+            #plt.axis('equal')
+            plt.xlim((xLower, 0))
+            plt.ylim((0, DDriver*39.3701+0.2))
+            plt.plot(xNoInsert, DOuterNoInsert*39.3701, 'k', label="$D_\mathrm{o}$")
+            plt.plot(xNoInsert, DInnerNoInsert, 'r', label="$D_\mathrm{i}$")
+            plt.plot([xShock, xShock], [-0.6, 0.6], 'k--')
+            plt.xlabel("$x\ [\mathrm{m}]$")
+            plt.ylabel("$D\ [\mathrm{inch}]$")
+            plt.legend(loc="best")
+            plt.tight_layout()
+            if self.GUI:
+                self.figDriver = plt.gcf()
+                plt.close(self.figDriver)
         self.tNoInsert = tNoInsert
         self.pNoInsert = pNoInsert
         self.TNoInsert = TNoInsert
@@ -182,6 +216,7 @@ class ShockSim:
         self.pMatrix = pMatrix
         self.timeXT = timeXT
         self.positionXT = positionXT
+
         # save driver insert profiles and pressure traces
         if self.saveData:
             np.savetxt('timeNoInsert.csv', tNoInsert, delimiter=',')
@@ -306,11 +341,17 @@ class ShockSim:
         TNoInsert = np.array(ss.thermoTable.getTemperature(rNoInsert, pNoInsert, YNoInsert))
         TWall = ss.Tw
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[T1 - 500, T5 + 500], saveData=True)
+            if self.GUI:
+                self.figT = ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[T1 - 500, T5 + 500], saveData=True, outputFigure=True)
+            else:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[T1 - 500, T5 + 500], saveData=True)
             TMatrix = ss.XTDiagram_variableMatrix
             timeXT = ss.XTDiagram_T
             positionXT = ss.XTDiagram_X
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[p1 / 1e5 - 0.1, p5 / 1e5 + 0.3], saveData=True)
+            if self.GUI:
+                self.figP = ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[p1 / 1e5 - 0.1, p5 / 1e5 + 0.3], saveData=True, outputFigure=True)
+            else:
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[p1 / 1e5 - 0.1, p5 / 1e5 + 0.3], saveData=True)
             pMatrix = ss.XTDiagram_variableMatrix
         # plot
         if self.plot:
@@ -319,11 +360,17 @@ class ShockSim:
             plt.xlabel("$t\ [\mathrm{ms}]$")
             plt.ylabel("$p\ [\mathrm{bar}]$")
             plt.tight_layout()
+            if self.GUI:
+                self.figEndWallP = plt.gcf()
+                plt.close(self.figEndWallP)
             plt.figure()
             plt.plot(tNoInsert / 1e-3, TNoInsert, 'r') #label="$\mathrm{No\ Insert}$")
             plt.xlabel("$t\ [\mathrm{ms}]$")
             plt.ylabel("$T\ [\mathrm{K}]$")
             plt.tight_layout()
+            if self.GUI:
+                self.figEndWallT = plt.gcf()
+                plt.close(self.figEndWallT)
         self.tNoInsert = tNoInsert
         self.pNoInsert = pNoInsert
         self.TNoInsert = TNoInsert

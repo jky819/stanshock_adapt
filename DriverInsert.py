@@ -18,13 +18,14 @@ from scipy.optimize import newton
 from scipy.interpolate import interp1d
 
 class InsertOpt:
-    def __init__(self, Mixture, Thermal, Sim, Geometry, plot = True, saveData = False):
+    def __init__(self, Mixture, Thermal, Sim, Geometry, plot = True, saveData = False, GUI = False):
         self.Mixture = Mixture
         self.Thermal = Thermal
         self.Sim = Sim
         self.Geometry = Geometry
         self.plot = plot
         self.saveData = saveData
+        self.GUI = GUI
 
         # see if backfill option is specified, if not, set to default no backfill
         try:
@@ -91,7 +92,7 @@ class InsertOpt:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=True)
+        plt.rc('text', usetex=False)
 
         # setup geometry
         xLower = -LDriver
@@ -111,9 +112,9 @@ class InsertOpt:
         dlnAdx = lambda x, t: dAdx(x) / A(x)
 
         # set up the gasses
-        u1 = 0.0;
-        u4 = 0.0;  # initially 0 velocity
-        T4 = T1;  # assumed
+        u1 = 0.0
+        u4 = 0.0  # initially 0 velocity
+        T4 = T1  # assumed
         gas1.TPX = T1, p1, self.Mixture['X1']
         gas4.TPX = T4, p4, self.Mixture['X4']
 
@@ -246,13 +247,37 @@ class InsertOpt:
         rInsert = np.array(ss.probes[0].r)
         YInsert = np.array(ss.probes[0].Y)
         TInsert = np.array(ss.thermoTable.getTemperature(rInsert, pInsert, YInsert))
+        # TODO: check out figures here:
+        if self.plot:
+            if not self.GUI:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)])
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert)/1e5, max(pInsert)/1e5])
 
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert)/1e5, max(pInsert)/1e5])
+            if self.plot:
+                if self.GUI:
+                    self.figT = ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)],
+                                                 saveData=True, outputFigure=True)
+                else:
+                    ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert), max(TInsert)], saveData=True)
+                TMatrix = ss.XTDiagram_variableMatrix
+                timeXT = ss.XTDiagram_T
+                positionXT = ss.XTDiagram_X
+                if self.GUI:
+                    self.figP = ss.plotXTDiagram(ss.XTDiagrams["p"],
+                                                 limits=[min(pInsert) / 1e5, max(pInsert) / 1e5], saveData=True,
+                                                 outputFigure=True)
+                else:
+                    ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert) / 1e5, max(pInsert) / 1e5],
+                                     saveData=True)
+                pMatrix = ss.XTDiagram_variableMatrix
+                self.TMatrix = TMatrix
+                self.pMatrix = pMatrix
+                self.timeXT = timeXT
+                self.positionXT = positionXT
         xInsert = ss.x
         DOuterInsert = ss.DOuter(ss.x)
-        DInnerInsert = ss.DInner(ss.x)
+        DInnerInsert = ss.DInner(ss.x)*39.3701 # inch
 
         # setup geometry of discrete insert
         DIn = ss.DInner(ss.x)
@@ -354,8 +379,9 @@ class InsertOpt:
         YInsert_dis = np.array(ss.probes[0].Y)
         TInsert_dis = np.array(ss.thermoTable.getTemperature(rInsert_dis, pInsert_dis, YInsert_dis))
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert_dis), max(TInsert_dis)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert_dis)/1e5, max(pInsert_dis)/1e5])
+            if not self.GUI:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert_dis), max(TInsert_dis)])
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert_dis)/1e5, max(pInsert_dis)/1e5])
         xInsert_dis = ss.x
         DOuterInsert_dis = ss.DOuter(ss.x)
         DInnerInsert_dis = ss.DInner(ss.x)
@@ -417,31 +443,39 @@ class InsertOpt:
         YNoInsert = np.array(ss.probes[0].Y)
         TNoInsert = np.array(ss.thermoTable.getTemperature(rNoInsert, pNoInsert, YNoInsert))
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert)/1e5, max(pNoInsert)/1e5])
+            if not self.GUI:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)])
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert)/1e5, max(pNoInsert)/1e5])
 
         # plot
         if self.plot:
             plt.figure()
             plt.plot(tNoInsert / 1e-3, pNoInsert / 1e5, 'k', label="$\mathrm{No\ Insert}$")
             plt.plot(tInsert / 1e-3, pInsert / 1e5, 'r', label="$\mathrm{Optimized\ Insert}$")
-            plt.plot(tInsert_dis / 1e-3, pInsert_dis / 1e5, '--b', label="$\mathrm{Optimized\ Discrete\ Insert}$")
+            plt.plot(tInsert_dis / 1e-3, pInsert_dis / 1e5, '--b', label="$\mathrm{Dummy\ Discrete\ Insert}$")
             plt.xlabel("$t\ [\mathrm{ms}]$")
             plt.ylabel("$p\ [\mathrm{bar}]$")
             plt.legend(loc="best")
             plt.tight_layout()
+            if self.GUI:
+                self.figEndWallP = plt.gcf()
+                plt.close(self.figEndWallP)
 
-            plt.figure()
-            plt.axis('equal')
-            plt.xlim((-2, 0.5))
-            plt.plot(xInsert, DOuterInsert, 'k', label="$D_\mathrm{o}$")
+            plt.figure(figsize=(12, 2))
+            #plt.axis('equal')
+            plt.xlim((xLower, 0))
+            plt.ylim((0, DDriver*39.3701+0.2)) # inch
+            plt.plot(xInsert, DOuterInsert*39.3701, 'k', label="$D_\mathrm{o}$")
             plt.plot(xInsert, DInnerInsert, 'r', label="$D_\mathrm{i}$")
-            plt.plot(xInsert_dis, DInnerInsert_dis, 'b', label="$D_\mathrm{dis}$")
-            plt.plot([xShock, xShock], [-0.6, 0.6], 'k--')
+            plt.plot(xInsert_dis, DInnerInsert_dis*39.3701, 'b', label="$D_\mathrm{dis}$")
+            plt.plot([xShock, xShock], [-5 , 5], 'k--')
             plt.xlabel("$x\ [\mathrm{m}]$")
-            plt.ylabel("$D\ [\mathrm{m}]$")
+            plt.ylabel("$D\ [\mathrm{inch}]$")
             plt.legend(loc="best")
             plt.tight_layout()
+            if self.GUI:
+                self.figDriver = plt.gcf()
+                plt.close(self.figDriver)
 
         self.tNoInsert = tNoInsert
         self.pNoInsert = pNoInsert
@@ -528,7 +562,7 @@ class InsertOpt:
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
         mpl.rcParams['font.size'] = fontsize
-        plt.rc('text', usetex=True)
+        plt.rc('text', usetex=False)
 
         # setup geometry
         xLower = -LDriver
@@ -913,7 +947,7 @@ class InsertOpt:
             gas4 = ct.Solution(mech)
             have_p5 = False
 
-        nXCoarse, nXFine = self.Sim['nXCoarse'], self.Sim['nXFine']  # mesh resolution
+        nXFine = self.Sim['nXFine']  # mesh resolution
         LDriver, LDriven = self.Geometry['LDriver'], self.Geometry['LDriven']
         DDriver, DDriven = self.Geometry['DDriver'], self.Geometry['DDriven']
         plt.close("all")
@@ -1063,11 +1097,32 @@ class InsertOpt:
         rInsert_dis = np.array(ss.probes[0].r)
         YInsert_dis = np.array(ss.probes[0].Y)
         TInsert_dis = np.array(ss.thermoTable.getTemperature(rInsert_dis, pInsert_dis, YInsert_dis))
-        DInnerInsert_dis = ss.DInner(ss.x)
+        DInnerInsert_dis = ss.DInner(ss.x)*39.3701 # inch
         xInsert_dis = ss.x
+        self.xInsert = xInsert_dis
+        self.DInnerInsert = DInnerInsert_dis
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert_dis), max(TInsert_dis)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert_dis) / 1e5, max(pInsert_dis) / 1e5])
+            if self.plot:
+                if self.GUI:
+                    self.figT = ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert_dis), max(TInsert_dis)],
+                                                 saveData=True, outputFigure=True)
+                else:
+                    ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TInsert_dis), max(TInsert_dis)], saveData=True)
+                TMatrix = ss.XTDiagram_variableMatrix
+                timeXT = ss.XTDiagram_T
+                positionXT = ss.XTDiagram_X
+                if self.GUI:
+                    self.figP = ss.plotXTDiagram(ss.XTDiagrams["p"],
+                                                 limits=[min(pInsert_dis) / 1e5, max(pInsert_dis) / 1e5], saveData=True,
+                                                 outputFigure=True)
+                else:
+                    ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pInsert_dis) / 1e5, max(pInsert_dis) / 1e5],
+                                     saveData=True)
+                pMatrix = ss.XTDiagram_variableMatrix
+                self.TMatrix = TMatrix
+                self.pMatrix = pMatrix
+                self.timeXT = timeXT
+                self.positionXT = positionXT
         # ----------------------------------------------------------------------------------------
         # Now simulate without insert
         # ----------------------------------------------------------------------------------------
@@ -1146,9 +1201,10 @@ class InsertOpt:
         DOuterTube = ss.DOuter(ss.x)
 
         if self.plot:
-            ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)])
-            ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert) / 1e5, max(pNoInsert) / 1e5])
-
+            if not self.GUI:
+                ss.plotXTDiagram(ss.XTDiagrams["t"], limits=[min(TNoInsert), max(TNoInsert)], saveData=True)
+                ss.plotXTDiagram(ss.XTDiagrams["p"], limits=[min(pNoInsert) / 1e5, max(pNoInsert) / 1e5], saveData=True)
+        # TODO: check here for how to get figure
         # plot
         if self.plot:
             plt.figure()
@@ -1158,17 +1214,23 @@ class InsertOpt:
             plt.ylabel("$p\ [\mathrm{bar}]$")
             plt.legend(loc="best")
             plt.tight_layout()
-
-            plt.figure()
-            plt.axis('equal')
-            plt.xlim((-2, 0.5))
-            plt.plot(xNoInsert, DOuterTube, 'k', label="$D_\mathrm{o}$")
+            if self.GUI:
+                self.figEndWallP = plt.gcf()
+                plt.close(self.figEndWallP)
+            plt.figure(figsize=(12, 2))
+            #plt.axis('equal')
+            plt.xlim((xLower, 0))
+            plt.ylim((0, DDriver*39.3701+0.2))
+            plt.plot(xNoInsert, DOuterTube*39.3701, 'k', label="$D_\mathrm{o}$")
             plt.plot(xInsert_dis, DInnerInsert_dis, 'b', label="$D_\mathrm{dis}$")
             plt.plot([xShock, xShock], [-0.8, 0.8], 'k--')
             plt.xlabel("$x\ [\mathrm{m}]$")
-            plt.ylabel("$D\ [\mathrm{m}]$")
+            plt.ylabel("$D\ [\mathrm{inch}]$")
             plt.legend(loc="best")
             plt.tight_layout()
+            if self.GUI:
+                self.figDriver = plt.gcf()
+                plt.close(self.figDriver)
         if self.saveData:
             np.savetxt('tNoInsert.csv', tNoInsert, delimiter=',')
             np.savetxt('pNoInsert.csv', pNoInsert, delimiter=',')

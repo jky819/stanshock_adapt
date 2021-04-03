@@ -23,10 +23,9 @@ import numpy as np
 from numba import double, jit
 import cantera as ct
 import matplotlib.pyplot as plt
-plt.rc('text', usetex=False)
 from scipy.optimize import root
 from scipy.optimize import newton
-
+plt.rc('text', usetex=False)
 #Global variables (paramters) used by the solver
 mt=3 #number of ghost nodes
 mn=3 #number of 1D Euler equations
@@ -938,7 +937,7 @@ class stanShock(object):
         #store the XT Diagram
         self.XTDiagrams[variable]=newXTDiagram
 ##############################################################################
-    def plotXTDiagram(self,XTDiagram,limits=None, saveData = False):
+    def plotXTDiagram(self,XTDiagram,limits=None, saveData = False, outputFigure = False):
         '''
         Method: plotXTDiagram
         --------------------------------------------------------------------------
@@ -977,6 +976,10 @@ class stanShock(object):
         plt.ylabel("$t\ [\mathrm{ms}]$")
         plt.axis([min(XTDiagram.x), max(XTDiagram.x), min(t), max(t)])
         plt.colorbar()
+        if outputFigure:
+            fig = plt.gcf()
+            plt.close(fig)
+            return fig
 ##############################################################################
     def soundSpeed(self,r,p,gamma):
         '''
